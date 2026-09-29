@@ -81,6 +81,19 @@ See the [app development guide](https://docs.twenty.com/developers/extend/apps/g
 
 Run Twenty on your own infrastructure with [Docker Compose](https://docs.twenty.com/developers/self-host/capabilities/docker-compose), or contribute locally via the [local setup guide](https://docs.twenty.com/developers/contribute/capabilities/local-setup).
 
+#### Hugging Face Space Deployment
+
+When deploying Twenty to Hugging Face Spaces using the Docker SDK, configure the following environment variables in your Space **Settings → Variables and Secrets**:
+
+| Variable | Type | Description |
+|---|---|---|
+| `PG_DATABASE_URL` | Secret | Connection string for external PostgreSQL instance (e.g. `postgres://user:pass@host:5432/twenty`) |
+| `REDIS_URL` | Secret | Connection string for external Redis instance (e.g. `redis://:pass@host:6379`) |
+| `APP_SECRET` | Secret | Random secret key (32+ characters) for session token signing |
+| `SERVER_URL` | Variable | Public domain of the deployment (e.g. `https://leon4gr45-twenty.hf.space`) |
+| `PORT` | Variable | Application HTTP port, defaulted to `7860` for Hugging Face Spaces |
+| `NODE_PORT` | Variable | Internal Node server port, defaulted to `7860` for Hugging Face Spaces |
+
 <br />
 <br />
 
