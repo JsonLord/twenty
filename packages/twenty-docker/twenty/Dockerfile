@@ -39,17 +39,20 @@ RUN yarn workspaces focus twenty twenty-server twenty-emails twenty-shared twent
 
 FROM server-deps AS twenty-server-build
 
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV NX_PARALLEL=1
+
 COPY ./packages/twenty-emails /app/packages/twenty-emails
 COPY ./packages/twenty-shared /app/packages/twenty-shared
 COPY ./packages/twenty-client-sdk /app/packages/twenty-client-sdk
 COPY ./packages/twenty-server /app/packages/twenty-server
 
-RUN npx nx run twenty-server:lingui:extract && \
-    npx nx run twenty-server:lingui:compile && \
-    npx nx run twenty-emails:lingui:extract && \
-    npx nx run twenty-emails:lingui:compile
+RUN npx nx run twenty-server:lingui:extract --parallel=1 && \
+    npx nx run twenty-server:lingui:compile --parallel=1 && \
+    npx nx run twenty-emails:lingui:extract --parallel=1 && \
+    npx nx run twenty-emails:lingui:compile --parallel=1
 
-RUN npx nx run twenty-server:build
+RUN npx nx run twenty-server:build --parallel=1
 
 # Clean server build output (type declarations and compiled tests are not needed at runtime;
 # source maps are kept because twenty-infra extracts them from the image for Sentry uploads)
@@ -61,21 +64,24 @@ RUN yarn workspaces focus --production twenty-emails twenty-shared twenty-client
 
 FROM front-deps AS twenty-front-build
 
+ENV NODE_OPTIONS="--max-old-space-size=3072"
+ENV NX_PARALLEL=1
+
 COPY ./packages/twenty-front /app/packages/twenty-front
 COPY ./packages/twenty-front-component-renderer /app/packages/twenty-front-component-renderer
 COPY ./packages/twenty-ui /app/packages/twenty-ui
 COPY ./packages/twenty-shared /app/packages/twenty-shared
 COPY ./packages/twenty-sdk /app/packages/twenty-sdk
 COPY ./packages/twenty-client-sdk /app/packages/twenty-client-sdk
-RUN npx nx run twenty-front:lingui:extract && \
-    npx nx run twenty-front:lingui:compile
+RUN npx nx run twenty-front:lingui:extract --parallel=1 && \
+    npx nx run twenty-front:lingui:compile --parallel=1
 # To skip the memory-intensive frontend build, pre-build on the host:
 #   npx nx build twenty-front
 # The check below will use packages/twenty-front/build/ if it already exists.
 RUN if [ -d /app/packages/twenty-front/build ]; then \
       echo "Using pre-built frontend from host"; \
     else \
-      NODE_OPTIONS="--max-old-space-size=8192" npx nx build twenty-front; \
+      NODE_OPTIONS="--max-old-space-size=3072" npx nx build twenty-front --parallel=1; \
     fi
 
 
@@ -104,6 +110,9 @@ WORKDIR /app/packages/twenty-server
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
 ENV NODE_ENV=production
+ENV PORT=7860
+ENV NODE_PORT=7860
+EXPOSE 7860
 
 # Workspace root config
 COPY --chown=1000 --from=twenty-server-build /app/package.json /app/yarn.lock /app/.yarnrc.yml /app/

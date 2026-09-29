@@ -1,3 +1,12 @@
+---
+title: Twenty
+emoji: 💼
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 <p align="center">
   <a href="https://www.twenty.com">
     <img src="./packages/twenty-website/public/images/core/logo.svg" width="100px" alt="Twenty logo" />
