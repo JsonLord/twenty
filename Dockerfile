@@ -302,3 +302,47 @@ FROM twenty-server AS twenty
 COPY --chown=1000 --from=twenty-front-build /app/packages/twenty-front/build /app/packages/twenty-server/dist/front
 
 LABEL org.opencontainers.image.description="Twenty image with backend and frontend."
+
+
+# ===========================================================================
+# Target: twenty-hf (default: self-contained Hugging Face Space)
+# PostgreSQL, Redis, the API/frontend, and the queue worker share one container.
+# Only the HTTP application port is exposed.
+# ===========================================================================
+
+FROM twenty-server AS twenty-hf
+
+USER root
+
+# dumb-init provides signal forwarding and zombie reaping while the script owns
+# readiness ordering and essential-process monitoring. PostgreSQL 18 matches the
+# version already selected by this source tree's all-in-one development target.
+RUN apk add --no-cache postgresql18 postgresql18-contrib redis dumb-init procps su-exec \
+ && mkdir -p /data/twenty
+
+COPY --chown=1000 --from=twenty-front-build /app/packages/twenty-front/build /app/packages/twenty-server/dist/front
+
+COPY packages/twenty-docker/twenty-hf/entrypoint.sh /usr/local/bin/twenty-hf-entrypoint
+COPY scripts/runtime-memory.sh /usr/local/bin/runtime-memory
+RUN chmod 0755 /usr/local/bin/twenty-hf-entrypoint /usr/local/bin/runtime-memory
+
+ENV TWENTY_DATA_DIR=/data/twenty \
+    SERVER_URL=https://leon4gr45-twenty.hf.space \
+    PORT=7860 \
+    NODE_PORT=7860 \
+    NODE_ENV=production \
+    STORAGE_TYPE=local \
+    IS_MULTIWORKSPACE_ENABLED=false \
+    IS_BILLING_ENABLED=false \
+    SIGN_IN_PREFILLED=false \
+    APPLICATION_LOG_DRIVER=CONSOLE \
+    PG_POOL_MAX_CONNECTIONS=5 \
+    PG_POOL_ALLOW_EXIT_ON_IDLE=true \
+    DISABLE_DB_MIGRATIONS=true
+
+EXPOSE 7860
+VOLUME ["/data/twenty"]
+
+LABEL org.opencontainers.image.description="Self-contained Twenty for Hugging Face Spaces: PostgreSQL, Redis, server, worker, and local storage."
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/twenty-hf-entrypoint"]
