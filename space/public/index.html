@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f7f8" />
+    <title>Twenty Mini — CRM workspace preview</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">20</span><strong>Twenty</strong></div>
+      <button class="search" type="button"><span>⌕</span> Search <kbd>⌘ K</kbd></button>
+      <nav aria-label="Main navigation">
+        <a href="#" class="active"><span>⌂</span> Home</a>
+        <a href="#"><span>◎</span> People <b>24</b></a>
+        <a href="#"><span>▣</span> Companies <b>12</b></a>
+        <a href="#"><span>◇</span> Opportunities <b>8</b></a>
+      </nav>
+      <p class="nav-title">Favorites</p>
+      <nav>
+        <a href="#"><span class="dot purple"></span> Hot prospects</a>
+        <a href="#"><span class="dot blue"></span> This quarter</a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#"><span>?</span> Help center</a>
+        <div class="user"><span class="avatar">LM</span><div><strong>Leon</strong><small>Workspace owner</small></div><span>•••</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <header><div><p>Saturday, October 3</p><h1>Good afternoon, Leon</h1></div><button class="primary">＋ Add record</button></header>
+
+      <section class="stats" aria-label="Workspace summary">
+        <article><span class="icon lavender">◎</span><div><small>People</small><strong>24</strong><em>+3 this week</em></div></article>
+        <article><span class="icon mint">▣</span><div><small>Companies</small><strong>12</strong><em>+2 this week</em></div></article>
+        <article><span class="icon peach">◇</span><div><small>Open pipeline</small><strong>$184k</strong><em>8 opportunities</em></div></article>
+      </section>
+
+      <section class="grid">
+        <article class="panel pipeline">
+          <div class="panel-title"><div><h2>Pipeline</h2><p>Opportunities by stage</p></div><button>•••</button></div>
+          <div class="bar"><span class="stage-1"></span><span class="stage-2"></span><span class="stage-3"></span><span class="stage-4"></span></div>
+          <div class="legend">
+            <div><span class="dot blue"></span><small>New</small><strong>$48k</strong></div>
+            <div><span class="dot purple"></span><small>Screening</small><strong>$72k</strong></div>
+            <div><span class="dot orange"></span><small>Proposal</small><strong>$40k</strong></div>
+            <div><span class="dot green"></span><small>Closing</small><strong>$24k</strong></div>
+          </div>
+        </article>
+
+        <article class="panel activity">
+          <div class="panel-title"><div><h2>Recent activity</h2><p>Your workspace updates</p></div><a href="#">View all</a></div>
+          <ul>
+            <li><span class="avatar gold">AK</span><div><strong>Ari Kim</strong> moved Acme to Proposal<small>12 minutes ago</small></div></li>
+            <li><span class="avatar pink">MS</span><div><strong>Maya Singh</strong> added a note to Linear<small>1 hour ago</small></div></li>
+            <li><span class="avatar cyan">JD</span><div><strong>Jon Davis</strong> created an opportunity<small>Yesterday</small></div></li>
+          </ul>
+        </article>
+
+        <article class="panel tasks">
+          <div class="panel-title"><div><h2>Tasks</h2><p>What needs your attention</p></div><button class="add">＋</button></div>
+          <label><input type="checkbox" /><span></span><div>Follow up with Acme<small>Today · High priority</small></div></label>
+          <label><input type="checkbox" /><span></span><div>Prepare quarterly review<small>Tomorrow</small></div></label>
+          <label><input type="checkbox" /><span></span><div>Send onboarding docs<small>Oct 6</small></div></label>
+        </article>
+
+        <article class="panel contacts">
+          <div class="panel-title"><div><h2>Recently viewed</h2><p>Pick up where you left off</p></div><a href="#">View all</a></div>
+          <table><tbody>
+            <tr><td><span class="avatar violet">OC</span></td><td><strong>Olivia Chen</strong><small>Head of Product</small></td><td><span class="company">L</span> Linear</td><td>2 min ago</td></tr>
+            <tr><td><span class="avatar coral">NW</span></td><td><strong>Noah Williams</strong><small>Founder</small></td><td><span class="company dark">V</span> Vercel</td><td>1 hr ago</td></tr>
+            <tr><td><span class="avatar green-bg">ES</span></td><td><strong>Emma Stone</strong><small>VP Sales</small></td><td><span class="company red">A</span> Acme</td><td>Yesterday</td></tr>
+          </tbody></table>
+        </article>
+      </section>
+      <footer>This lightweight preview is a static demonstration and does not persist data.</footer>
+    </main>
+  </body>
+</html>
