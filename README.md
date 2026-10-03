@@ -83,119 +83,23 @@ Run Twenty on your own infrastructure with [Docker Compose](https://docs.twenty.
 
 #### Hugging Face Space Deployment
 
-This repository's default Docker target is a self-contained, single-container
-Hugging Face deployment. It runs the Twenty web server on port `7860`, the
-Twenty queue worker, PostgreSQL, and Redis. PostgreSQL and Redis bind only to
-`127.0.0.1`; they are not exposed by the image. Uploaded files use Twenty's
-supported local filesystem driver. Docker Compose, Docker-in-Docker, external
-databases, S3, and external queue services are not required.
+The root Docker target is a deliberately minimal, dependency-free preview for
+Hugging Face Spaces. It serves a responsive CRM dashboard and a `/healthz`
+endpoint on port `7860` using Node's standard library. It does **not** install
+the monorepo dependencies, compile the production frontend/backend, run a
+database, or persist data.
 
-The startup supervisor initializes and upgrades the database, waits for
-PostgreSQL and Redis, starts the web server and waits for `/healthz`, and only
-then starts the worker and registers recurring jobs. Any essential process
-exiting stops the container.
+This small deployment is intended to keep the demo reliable on constrained
+Space builders. For a complete, stateful Twenty installation, use the supported
+[Docker Compose self-hosting guide](https://docs.twenty.com/developers/self-host/capabilities/docker-compose).
 
-##### Persistence
-
-All mutable state has one root, `TWENTY_DATA_DIR` (default `/data/twenty`):
-
-```text
-/data/twenty/
-├── postgres/  # durable CRM database
-├── storage/   # uploaded files
-├── logs/
-├── runtime/   # sockets and non-durable Redis data
-└── secrets/   # generated app, encryption, and database secrets
-```
-
-Attach Hugging Face persistent storage at `/data` to retain this hierarchy. A
-Space without persistent storage still boots, but **its database, uploads, and
-generated secrets can disappear after a restart, rebuild, or reallocation**.
-Alternatively, mount persistent storage elsewhere and set `TWENTY_DATA_DIR` to
-a directory on that mount before first boot.
-
-##### Configuration and required secrets
-
-No external service variables are required. The image sets local
-`PG_DATABASE_URL`, `REDIS_URL`, `STORAGE_TYPE=local`, ports, and the public Space
-URL. It generates cryptographically random `APP_SECRET`, `ENCRYPTION_KEY`, and
-an internal PostgreSQL password on first boot and stores them under
-`$TWENTY_DATA_DIR/secrets` with restricted permissions. You may instead set
-`APP_SECRET` and `ENCRYPTION_KEY` as persistent Hugging Face Secrets; never use
-new values with an existing database unless intentionally rotating keys.
-
-| Variable | Type | Description |
-|---|---|---|
-| `APP_SECRET` | Secret (optional) | Persistent session-signing secret; generated locally when omitted |
-| `ENCRYPTION_KEY` | Secret (optional) | Persistent at-rest encryption key; generated locally when omitted |
-| `SERVER_URL` | Variable (optional) | Public deployment URL; defaults to `https://leon4gr45-twenty.hf.space` |
-| `TWENTY_DATA_DIR` | Variable (optional) | Common persistent root; defaults to `/data/twenty` |
-| `TWENTY_LIGHT_MODE` | Variable (optional) | Set `true` to omit the separate worker and cron registration |
-
-Do not override `PG_DATABASE_URL` or `REDIS_URL`: this image intentionally
-requires its bundled localhost services.
-
-##### PostgreSQL and Redis choices
-
-Twenty requires PostgreSQL-specific TypeORM data sources and has no supported
-SQLite adapter. The image uses PostgreSQL 18, matching the version already used
-by this checkout's all-in-one target, with 20 connections, 48 MiB shared
-buffers, one autovacuum worker, and parallel query execution disabled. It binds
-only to `127.0.0.1` and a socket beneath the data root.
-
-Twenty uses BullMQ 5 for job queues and Redis for cache/client services. The
-upstream deployment and CI in this checkout validate Redis, not Valkey, so the
-Space retains the small Alpine Redis package rather than claiming unverified
-BullMQ compatibility. Persistence is disabled because PostgreSQL is the durable
-CRM store; `noeviction` avoids corrupting BullMQ semantics. No unsafe small
-`maxmemory` cap is imposed.
-
-##### Light mode
-
-The server and worker are separate upstream entry points, so basic synchronous
-CRM UI/API reads and writes can run with `TWENTY_LIGHT_MODE=true`. Redis remains
-required by server cache, session, and queue providers. Light mode does not run
-the worker or register recurring jobs: queued workflows, email/calendar sync,
-webhook delivery, imports/exports, search indexing, and other asynchronous or
-scheduled work will remain queued. Full mode is the safe default.
-
-##### Memory footprint
-
-Run `runtime-memory` inside the container for a lightweight per-component RSS
-table. Exact RSS depends on dataset and traffic. A real idle measurement is not
-recorded here because this development environment does not provide a Docker
-daemon; do not treat estimates as measurements. The PostgreSQL configuration
-reserves 48 MiB shared buffers and Redis allocates on demand without persistence.
-
-The Docker build also uses a single shared dependency-resolution stage. The
-server and frontend builds are deliberately serialized because Hugging Face's
-BuildKit otherwise executes both memory-heavy branches concurrently. Yarn fetch
-concurrency is limited to eight requests, Nx remains single-worker, and Node
-heaps are capped at 1536 MiB for dependencies/server and 2048 MiB for the
-frontend.
-
-##### Troubleshooting
+Build and verify the Space image locally with:
 
 ```bash
-# Public readiness and frontend
+docker build -t twenty-mini .
+docker run --rm -p 7860:7860 twenty-mini
 curl -fsS http://127.0.0.1:7860/healthz
-curl -fsS http://127.0.0.1:7860/ >/dev/null
-
-# Local-only dependencies
-pg_isready -h 127.0.0.1 -p 5432 -U twenty
-redis-cli -h 127.0.0.1 ping
-
-# Processes, memory, disk, and logs
-ps -ef | grep -E 'postgres|redis-server|dist/main|queue-worker'
-runtime-memory
-df -h "${TWENTY_DATA_DIR:-/data/twenty}"
-du -sh "${TWENTY_DATA_DIR:-/data/twenty}"/*
 ```
-
-Startup diagnostics go to the Space runtime log without printing credentials.
-If the worker is absent, confirm `TWENTY_LIGHT_MODE` is not `true`. Database or
-queue readiness failures usually indicate exhausted disk/memory or damaged
-ephemeral state; preserve the logs before replacing the affected data directory.
 
 <br />
 <br />
