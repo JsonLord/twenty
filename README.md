@@ -167,6 +167,13 @@ recorded here because this development environment does not provide a Docker
 daemon; do not treat estimates as measurements. The PostgreSQL configuration
 reserves 48 MiB shared buffers and Redis allocates on demand without persistence.
 
+The Docker build also uses a single shared dependency-resolution stage. The
+server and frontend builds are deliberately serialized because Hugging Face's
+BuildKit otherwise executes both memory-heavy branches concurrently. Yarn fetch
+concurrency is limited to eight requests, Nx remains single-worker, and Node
+heaps are capped at 1536 MiB for dependencies/server and 2048 MiB for the
+frontend.
+
 ##### Troubleshooting
 
 ```bash

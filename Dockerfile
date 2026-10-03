@@ -2,9 +2,15 @@
 # Dependency stages
 # ===========================================================================
 
-FROM node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS front-deps
+FROM node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS build-deps
 
 WORKDIR /app
+
+# HF's builder schedules independent stages concurrently. Keep dependency
+# resolution in one stage (rather than simultaneous frontend/server installs)
+# and limit Yarn's fetch fan-out and heap usage for the constrained builder.
+ENV NODE_OPTIONS="--max-old-space-size=1536"
+ENV YARN_NETWORK_CONCURRENCY=8
 
 COPY ./package.json ./yarn.lock ./.yarnrc.yml ./tsconfig.base.json ./nx.json /app/
 COPY ./.yarn/releases /app/.yarn/releases
@@ -16,30 +22,20 @@ COPY ./packages/twenty-front/package.json /app/packages/twenty-front/
 COPY ./packages/twenty-front-component-renderer/package.json /app/packages/twenty-front-component-renderer/
 COPY ./packages/twenty-sdk/package.json /app/packages/twenty-sdk/
 COPY ./packages/twenty-client-sdk/package.json /app/packages/twenty-client-sdk/
-
-RUN yarn workspaces focus twenty twenty-front twenty-front-component-renderer twenty-ui twenty-shared twenty-sdk twenty-client-sdk && yarn cache clean && npx nx reset
-
-
-FROM node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS server-deps
-
-WORKDIR /app
-
-COPY ./package.json ./yarn.lock ./.yarnrc.yml ./tsconfig.base.json ./nx.json /app/
-COPY ./.yarn/releases /app/.yarn/releases
-COPY ./.yarn/patches /app/.yarn/patches
-
 COPY ./packages/twenty-emails/package.json /app/packages/twenty-emails/
 COPY ./packages/twenty-server/package.json /app/packages/twenty-server/
 COPY ./packages/twenty-server/patches /app/packages/twenty-server/patches
-COPY ./packages/twenty-shared/package.json /app/packages/twenty-shared/
-COPY ./packages/twenty-client-sdk/package.json /app/packages/twenty-client-sdk/
 
-RUN yarn workspaces focus twenty twenty-server twenty-emails twenty-shared twenty-client-sdk && yarn cache clean && npx nx reset
+RUN yarn workspaces focus twenty twenty-front twenty-front-component-renderer \
+      twenty-ui twenty-sdk twenty-server twenty-emails twenty-shared \
+      twenty-client-sdk \
+ && yarn cache clean \
+ && npx nx reset
 
 
-FROM server-deps AS twenty-server-build
+FROM build-deps AS twenty-server-build
 
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 ENV NX_PARALLEL=1
 
 COPY ./packages/twenty-emails /app/packages/twenty-emails
@@ -59,13 +55,19 @@ RUN npx nx run twenty-server:build --parallel=1
 RUN find /app/packages/twenty-server/dist -name '*.d.ts' -delete \
  && rm -rf /app/packages/twenty-server/dist/packages/twenty-server/test
 
-RUN yarn workspaces focus --production twenty-emails twenty-shared twenty-client-sdk twenty-server
+RUN yarn workspaces focus --production twenty-emails twenty-shared twenty-client-sdk twenty-server \
+ && printf 'ready\n' > /tmp/twenty-server-build-complete
 
 
-FROM front-deps AS twenty-front-build
+FROM build-deps AS twenty-front-build
 
-ENV NODE_OPTIONS="--max-old-space-size=3072"
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV NX_PARALLEL=1
+
+# This marker dependency deliberately serializes the two memory-intensive
+# build branches. Without it BuildKit runs the frontend build while the server
+# is still compiling/pruning, which exceeds the HF Space build memory limit.
+COPY --from=twenty-server-build /tmp/twenty-server-build-complete /tmp/
 
 COPY ./packages/twenty-front /app/packages/twenty-front
 COPY ./packages/twenty-front-component-renderer /app/packages/twenty-front-component-renderer
@@ -81,7 +83,7 @@ RUN npx nx run twenty-front:lingui:extract --parallel=1 && \
 RUN if [ -d /app/packages/twenty-front/build ]; then \
       echo "Using pre-built frontend from host"; \
     else \
-      NODE_OPTIONS="--max-old-space-size=3072" npx nx build twenty-front --parallel=1; \
+      NODE_OPTIONS="--max-old-space-size=2048" npx nx build twenty-front --parallel=1; \
     fi
 
 
